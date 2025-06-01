@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hyrd.model.UserModel
 import com.example.hyrd.repository.FirebaseAuthRepository
-import com.example.hyrd.uiState.AuthUIState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +14,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import com.example.hyrd.uiState.AuthUIState
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
@@ -36,10 +36,39 @@ class AuthViewModel @Inject constructor(
     }
 
     private fun checkCurrentUser() {
-        val user = firebaseAuthRepository.currentUser
-        _uiState.value = AuthUIState(isLoggedIn = user != null, user = user)
-        Log.d(TAG, "Current user checked: ${user?.uid}, isLoggedIn: ${user != null}")
+        viewModelScope.launch {
+            val user = firebaseAuthRepository.currentUser
+            if (user != null) {
+                _uiState.value = AuthUIState(isLoggedIn = true, user = user)
+                fetchUserProfile() // Fetch profile if user is logged in
+            } else {
+                _uiState.value = AuthUIState(isLoggedIn = false, user = null, userProfile = null)
+            }
+            Log.d(TAG, "Current user checked: ${user?.uid}, isLoggedIn: ${user != null}")
+        }
     }
+
+    fun fetchUserProfile() {
+        viewModelScope.launch {
+            if (_uiState.value.user == null) return@launch // No user to fetch profile for
+
+            // Optimistically keep isLoading from previous state or set it if critical path
+            // _uiState.value = _uiState.value.copy(isLoading = true) // Optional: show loading for profile fetch
+
+            val profileResult = firebaseAuthRepository.getUserProfile()
+            profileResult.fold(
+                onSuccess = { userModel ->
+                    _uiState.value = _uiState.value.copy(userProfile = userModel, isLoading = false)
+                    Log.i(TAG, "User profile fetched successfully for role: ${userModel.role}")
+                },
+                onFailure = { exception ->
+                    _uiState.value = _uiState.value.copy(error = "Failed to fetch profile: ${exception.message}", isLoading = false)
+                    Log.e(TAG, "Failed to fetch user profile: ${exception.message}")
+                }
+            )
+        }
+    }
+
 
     fun login(email: String, password: String) {
         viewModelScope.launch {
@@ -49,7 +78,9 @@ class AuthViewModel @Inject constructor(
                 val result = firebaseAuthRepository.login(email, password)
                 result.fold(
                     onSuccess = { user ->
-                        _uiState.value = AuthUIState(isLoggedIn = true, user = user, isLoading = false)
+                        // User is set, now fetch profile
+                        _uiState.value = AuthUIState(isLoggedIn = true, user = user, isLoading = true) // isLoading true until profile is fetched
+                        fetchUserProfile() // This will update isLoading to false once done/failed
                         Log.i(TAG, "Login successful for user: ${user.uid}")
                     },
                     onFailure = { exception ->
@@ -90,18 +121,29 @@ class AuthViewModel @Inject constructor(
             }
 
             val userModel = UserModel(
+                // user_id will be set by repository after auth creation
                 role = selectedRole,
                 name = fullName,
-                email = email,
+                email = email, // Will be overwritten by repo if needed, but good to pass
+                password = "", // NEVER store plain password here
                 phone_number = phoneNumber,
-                date_of_birth = dobDate
+                date_of_birth = dobDate,
+                // bio = "", // Initialize other fields if necessary
+                // profile_picture = "",
+                // bio_image = ""
             )
 
             try {
                 val result = firebaseAuthRepository.register(email, passwordText, userModel)
                 result.fold(
                     onSuccess = { user ->
-                        _uiState.value = AuthUIState(isLoggedIn = true, user = user, isLoading = false)
+                        // User is set, now fetch profile (though for registration, userModel is already partially known)
+                        _uiState.value = AuthUIState(isLoggedIn = true, user = user, isLoading = true) // isLoading true until profile is "confirmed"
+                        // For new registration, the passed userModel can be used directly for userProfile
+                        // or re-fetch to confirm it's saved correctly.
+                        // For simplicity, let's assume the register function in repo saves it, and we can use the passed one.
+                        _uiState.value = _uiState.value.copy(userProfile = userModel.copy(user_id = user.uid, email = user.email ?: email), isLoading = false)
+
                         _registrationSuccess.value = true
                         Log.i(TAG, "Registration successful for user: ${user.uid}")
                     },
@@ -123,7 +165,7 @@ class AuthViewModel @Inject constructor(
 
     fun signOut() {
         firebaseAuthRepository.signOut()
-        _uiState.value = AuthUIState(isLoggedIn = false, user = null)
+        _uiState.value = AuthUIState(isLoggedIn = false, user = null, userProfile = null) // Clear profile on sign out
         Log.d(TAG, "User signed out.")
     }
 }

@@ -2,7 +2,6 @@ package com.example.hyrd.view
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,15 +24,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.hyrd.R
-import com.example.hyrd.model.JobModel
+import com.example.hyrd.model.WorkModel
 
 @Composable
-fun JobCardView(job: JobModel) {
+fun JobCardView(work: WorkModel, onClick: () -> Unit) { // Changed parameter to WorkModel
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 25.dp)
-            .clickable { /* Handle click */ }, verticalAlignment = Alignment.CenterVertically
+            .clickable(onClick = onClick) // Use the passed onClick lambda
+            .padding(vertical = 16.dp, horizontal = 8.dp), // Added some horizontal padding
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Column(
             modifier = Modifier
@@ -40,25 +41,40 @@ fun JobCardView(job: JobModel) {
                 .padding(end = 12.dp)
         ) {
             Text(
-                text = job.title, fontWeight = FontWeight.Bold, fontSize = 16.sp
+                text = work.name, // Changed from job.title to work.name
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = job.price, fontSize = 14.sp, color = Color.Gray
+                text = "IDR ${"%,.0f".format(work.wage)}", // Changed from job.price to work.wage and formatted
+                fontSize = 14.sp,
+                color = Color.Gray
             )
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                job.tags.forEach { tag ->
-                    TagBadge(text = tag)
-                }
-            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = work.job_type, // Assuming job_type is like a category/tag
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .background(
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Location: ${work.location}",
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
         }
 
         Icon(
             painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
-            contentDescription = "Go",
+            contentDescription = "View Details",
             tint = Color.Gray,
             modifier = Modifier.size(20.dp)
         )
@@ -66,7 +82,7 @@ fun JobCardView(job: JobModel) {
 }
 
 @Composable
-fun TagBadge(text: String) {
+fun TagBadge(text: String) { // This can be kept if you have other uses or adapt it
     Box(
         modifier = Modifier
             .background(Color(0xFFFFE0B2), shape = RoundedCornerShape(12.dp))
@@ -82,10 +98,17 @@ fun TagBadge(text: String) {
 @Composable
 fun JobCardPreview() {
     JobCardView(
-        job = JobModel(
-            title = "Product Data Entry",
-            price = "IDR 50,000 per 100 products",
-            tags = listOf("Microsoft Excel", "High Attention", "Basic e-commerce knowledge")
-        )
+        work = WorkModel( // Changed to WorkModel for preview
+            work_id = "1",
+            name = "Product Data Entry Expert",
+            description = "Detailed data entry job.",
+            job_type = "Data Entry",
+            quota = 5,
+            location = "Remote",
+            work_hour = "Flexible",
+            wage = 50000.0,
+            status = true
+        ),
+        onClick = {}
     )
 }
