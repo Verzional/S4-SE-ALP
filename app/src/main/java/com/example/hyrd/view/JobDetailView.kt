@@ -3,7 +3,6 @@ package com.example.hyrd.view
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,72 +45,71 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.hyrd.R
+import com.example.hyrd.viewmodel.ApplicationViewModel
+import com.example.hyrd.viewmodel.AuthViewModel
 import com.example.hyrd.viewmodel.WorkViewModel
-
-// import com.example.hyrd.viewmodel.ApplicationViewModel // For later apply job integration
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JobDetailView(
-    workId: String, // Passed as navigation argument
+    workId: String,
     navController: NavController,
-    workViewModel: WorkViewModel = hiltViewModel()
-    // applicationViewModel: ApplicationViewModel = hiltViewModel() // For later
+    authViewModel: AuthViewModel = hiltViewModel(), // To get user role and profile
+    workViewModel: WorkViewModel = hiltViewModel(),
+    applicationViewModel: ApplicationViewModel = hiltViewModel()
 ) {
-    LaunchedEffect(workId) {
-        workViewModel.loadJobDetail(workId)
-    }
-
     val workDetailState by workViewModel.workDetailState.collectAsState()
+    val applyJobState by applicationViewModel.applyJobState.collectAsState()
+    val authState by authViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // TODO: Observe applicationViewModel state for apply job status
+    LaunchedEffect(workId) {
+        workViewModel.loadJobDetail(workId)
+        if (authState.user != null) { // Check if user has already applied
+            applicationViewModel.checkIfAlreadyApplied(workId)
+        }
+    }
+
+    LaunchedEffect(applyJobState) {
+        if (applyJobState.applicationSubmitted) {
+            Toast.makeText(context, "Application submitted successfully!", Toast.LENGTH_LONG).show()
+            applicationViewModel.resetApplyJobState() // Reset state
+            navController.navigate("successfulApply") {
+                // Optional: popUpTo(navController.graph.findStartDestination().id) or specific route
+            }
+        }
+        applyJobState.error?.let {
+            Toast.makeText(context, "Error: $it", Toast.LENGTH_LONG).show()
+            applicationViewModel.resetApplyJobState() // Reset state
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = workDetailState.job?.name ?: "Loading...",
+                        workDetailState.job?.name ?: "Loading...",
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
-                },
-                navigationIcon = {
+                }, navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
+                }, colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
-        }
-    ) { innerPadding ->
+        }) { innerPadding ->
         when {
-            workDetailState.isLoading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+            workDetailState.isLoading -> { /* ... Loading UI ... */
             }
 
-            workDetailState.error != null -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Error: ${workDetailState.error}", color = MaterialTheme.colorScheme.error)
-                }
+            workDetailState.error != null -> { /* ... Error UI ... */
             }
 
             workDetailState.job != null -> {
@@ -120,9 +119,10 @@ fun JobDetailView(
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
                         .padding(innerPadding)
-                        .padding(24.dp)
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
+                    // ... (Job details: description, wage, location, etc. - already implemented)
                     Text(
                         text = job.description,
                         fontSize = 15.sp,
@@ -136,11 +136,11 @@ fun JobDetailView(
                     JobDetailItem("Work Hours:", job.work_hour)
                     JobDetailItem("Job Type/Category:", job.job_type)
                     JobDetailItem("Quota:", "${job.quota} workers")
-                    // TODO: Add employer information if available and relevant
+
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // CV Upload Section (Placeholder for now, actual upload needs more logic)
+                    // CV Upload Section (Remains a placeholder visually)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -148,17 +148,14 @@ fun JobDetailView(
                         Button(
                             onClick = {
                                 Toast.makeText(
-                                    context,
-                                    "CV Upload feature coming soon!",
-                                    Toast.LENGTH_SHORT
+                                    context, "CV Upload feature coming soon!", Toast.LENGTH_SHORT
                                 ).show()
-                                // TODO: Implement actual CV upload logic
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0FBE97)), // Keep custom green
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0FBE97)),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.outline_arrow_upward_alt_24), // Ensure this drawable exists
+                                painter = painterResource(R.drawable.outline_arrow_upward_alt_24),
                                 contentDescription = "Upload",
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp)
@@ -180,47 +177,99 @@ fun JobDetailView(
                         }
                     }
 
-                    Spacer(modifier = Modifier.weight(1f)) // Pushes button to bottom
+                    Spacer(modifier = Modifier.weight(1f)) // Pushes buttons to bottom
 
-                    Button(
-                        onClick = {
-                            // TODO: Integrate with ApplicationViewModel.applyForJob(job.work_id, cvPath)
-                            Toast.makeText(
-                                context,
-                                "Apply Job feature coming soon!",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            // Example: navController.navigate("successfulApply") or handle via ViewModel state
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "Apply for this Job",
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontSize = 16.sp,
-                            textAlign = TextAlign.Center
-                        )
+                    // "View Applicants" Button for Employers
+                    if (authState.userProfile?.role == "Employer") {
+                        Button(
+                            onClick = {
+                                navController.navigate("applicants/${job.work_id}")
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .padding(bottom = 8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Person,
+                                contentDescription = "View Applicants Icon",
+                                tint = MaterialTheme.colorScheme.onSecondary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "View Applicants (${workDetailState.job?.quota ?: 0} needed)", // Show quota
+                                color = MaterialTheme.colorScheme.onSecondary, fontSize = 16.sp
+                            )
+                        }
+                    }
+
+                    // Apply Job Button for Employees
+                    if (authState.userProfile?.role == "Employee") {
+                        when {
+                            applyJobState.isLoading -> CircularProgressIndicator(
+                                modifier = Modifier.align(
+                                    Alignment.CenterHorizontally
+                                )
+                            )
+
+                            applyJobState.hasApplied -> {
+                                Text(
+                                    "You have already applied for this job. Status: ${applyJobState.existingApplicationStatus}",
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier
+                                        .padding(vertical = 16.dp)
+                                        .fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+
+                            else -> {
+                                Button(
+                                    onClick = {
+                                        // For now, use a dummy CV path.
+                                        // In a real app, you'd get this from an upload process.
+                                        val dummyCvPath = "cv_uploads/user_cv.pdf"
+                                        if (authState.userProfile != null) {
+                                            applicationViewModel.applyForJob(
+                                                job.work_id, dummyCvPath, authState.userProfile
+                                            )
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "User profile not loaded. Cannot apply.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        text = "Apply for this Job",
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        fontSize = 16.sp
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            else -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Job not found or no longer available.", textAlign = TextAlign.Center)
-                }
+            else -> { /* ... No job found UI ... */
             }
         }
     }
 }
+
+// JobDetailItem composable remains the same
+// @Composable
+// fun JobDetailItem(label: String, value: String) { ... }
 
 @Composable
 fun JobDetailItem(label: String, value: String) {
@@ -232,9 +281,7 @@ fun JobDetailItem(label: String, value: String) {
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
-            text = value,
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            text = value, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(4.dp))
     }

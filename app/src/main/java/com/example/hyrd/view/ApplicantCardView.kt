@@ -3,6 +3,7 @@ package com.example.hyrd.view
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,9 +15,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,131 +41,144 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.hyrd.R
-import com.example.hyrd.model.ApplicantModel
+import com.example.hyrd.model.ApplicationModel
+import java.text.SimpleDateFormat
+import java.util.Locale
 
-// Status Enum
-enum class ApplicantStatus(val label: String, val color: Color) {
-    Waiting("Waiting", Color(0xFFFFD873)), Rejected(
-        "Rejected", Color(0xFFFF7D87)
-    ),
-    Approved("Approved", Color(0xFF0FBE97))
+// Status Enum - can be kept for local styling decisions or mapping
+enum class ApplicantDisplayStatus(val label: String, val color: Color) {
+    Pending("Pending", Color(0xFFFFD873)), // Yellowish
+    Rejected("Rejected", Color(0xFFFF7D87)),  // Reddish
+    Accepted("Accepted", Color(0xFF0FBE97)); // Greenish
+
+    companion object {
+        fun fromString(status: String): ApplicantDisplayStatus {
+            return when (status.lowercase(Locale.getDefault())) {
+                "accepted" -> Accepted
+                "rejected" -> Rejected
+                else -> Pending
+            }
+        }
+    }
 }
 
 @Composable
 fun ApplicantCardView(
-    applicant: ApplicantModel, onStatusChange: (ApplicantStatus) -> Unit
+    application: ApplicationModel, // Changed from ApplicantModel to ApplicationModel
+    onStatusChange: (newStatus: String) -> Unit // newStatus will be "accepted" or "rejected"
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val displayStatus = ApplicantDisplayStatus.fromString(application.status)
+    val dateFormatter = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
 
-    Column(
+
+    Card( // Using Card for better elevation and structure
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, Color(0xFFE0E0E0), shape = RoundedCornerShape(12.dp))
-            .padding(16.dp)
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(R.drawable._3b43f1309d921872741ed31a3676b0e),
-                contentDescription = "Profile Picture",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-            )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.Top) { // Align to top for status badge
+                Image( // Placeholder for applicant image
+                    painter = painterResource(R.drawable._3b43f1309d921872741ed31a3676b0e), // Ensure this placeholder exists
+                    contentDescription = "Profile Picture",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(56.dp) // Slightly larger
+                        .clip(CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                )
 
-            Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = applicant.name, fontWeight = FontWeight.SemiBold, fontSize = 16.sp
+                        text = application.applicant_name.ifEmpty { "N/A" }, // Use denormalized name
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "${applicant.age} years old", fontSize = 12.sp, color = Color.Gray
+                        text = application.applicant_email.ifEmpty { "N/A" }, // Use denormalized email
+                        style = MaterialTheme.typography.bodySmall, color = Color.Gray
                     )
+                    application.application_date?.let {
+                        Text(
+                            text = "Applied: ${dateFormatter.format(it)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                    }
+                    if (application.cv_path.isNotBlank()) {
+                        Text( // Placeholder for CV link
+                            text = "CV: ${application.cv_path.substringAfterLast('/')}", // Show filename
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { /* TODO: Implement CV download/view */ })
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = applicant.email, fontSize = 12.sp, color = Color.Gray
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = applicant.phone, fontSize = 12.sp, color = Color.Gray
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = applicant.resumeUrl, fontSize = 14.sp, color = Color(0xFF4A90E2)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Box(
-                modifier = Modifier
-                    .background(
-                        applicant.status.color, shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = applicant.status.label, color = Color.White, fontSize = 12.sp
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Box {
-            OutlinedButton(
-                onClick = { expanded = true }) {
-                Text(
-                    text = "Manage", color = Color(0xFF2F7CF6)
-                )
-            }
-
-            DropdownMenu(
-                expanded = expanded, onDismissRequest = { expanded = false }) {
-                ApplicantStatus.values().forEach { status ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = status.label,
-                                color = if (status == ApplicantStatus.Waiting) Color.Gray else Color.Black
+                // Status Badge and Menu
+                Column(horizontalAlignment = Alignment.End) {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                displayStatus.color, shape = RoundedCornerShape(16.dp)
                             )
-                        }, onClick = {
-                            if (status != ApplicantStatus.Waiting) {
-                                onStatusChange(status)
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = displayStatus.label,
+                            color = Color.White, // Assuming white text looks good on these badge colors
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    if (application.status.equals(
+                            "pending", ignoreCase = true
+                        )
+                    ) { // Only show menu for pending
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box {
+                            IconButton(onClick = { expanded = true }) {
+                                Icon(
+                                    Icons.Filled.MoreVert, contentDescription = "Manage Application"
+                                )
                             }
-                            expanded = false
-                        }, enabled = status != ApplicantStatus.Waiting
-                    )
+                            DropdownMenu(
+                                expanded = expanded, onDismissRequest = { expanded = false }) {
+                                DropdownMenuItem(text = { Text("Accept Application") }, onClick = {
+                                    onStatusChange("accepted")
+                                    expanded = false
+                                })
+                                DropdownMenuItem(text = { Text("Reject Application") }, onClick = {
+                                    onStatusChange("rejected")
+                                    expanded = false
+                                })
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, backgroundColor = 0xFFF0F0F0)
 @Composable
 fun PreviewApplicantCard() {
-    var status by remember { mutableStateOf(ApplicantStatus.Waiting) }
-
+    var status by remember { mutableStateOf("pending") }
     ApplicantCardView(
-        applicant = ApplicantModel(
-            name = "Olivia Hartono",
-            age = 25,
-            email = "olivia.hartono@example.com",
-            phone = "+62 812-3456-7890",
-            resumeUrl = "olivia_cv.pdf",
+        application = ApplicationModel(
+            application_id = "app123",
+            work_id = "work789",
+            worker_id = "user456",
+            applicant_name = "Olivia Hartono",
+            applicant_email = "olivia.h@example.com",
+            cv_path = "cv_uploads/olivia_cv.pdf",
+            application_date = java.util.Date(),
             status = status
         ), onStatusChange = { newStatus -> status = newStatus })
 }
