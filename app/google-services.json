@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "1057235235856",
+    "firebase_url": "https://hyrd-id-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "hyrd-id",
+    "storage_bucket": "hyrd-id.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1057235235856:android:79aad9001cc3be57a10695",
+        "android_client_info": {
+          "package_name": "com.example.hyrd"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbl5qM1RoejnGKpizLHYNwKVhAjjc-bJU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
