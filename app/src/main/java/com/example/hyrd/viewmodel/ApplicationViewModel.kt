@@ -6,36 +6,15 @@ import com.example.hyrd.model.ApplicationModel
 import com.example.hyrd.model.UserModel
 import com.example.hyrd.repository.FirebaseApplicationRepository
 import com.example.hyrd.repository.FirebaseAuthRepository
+import com.example.hyrd.uiState.ApplicantListUIState
+import com.example.hyrd.uiState.ApplyJobUIState
+import com.example.hyrd.uiState.UpdateApplicationStatusUIState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-// UI State for applying to a job
-data class ApplyJobUIState(
-    val isLoading: Boolean = false,
-    val applicationSubmitted: Boolean = false,
-    val error: String? = null,
-    val hasApplied: Boolean = false, // To check if user already applied
-    val existingApplicationStatus: String? = null
-)
-
-// UI State for listing applicants
-data class ApplicantListUIState(
-    val isLoading: Boolean = false,
-    val applicants: List<ApplicationModel> = emptyList(),
-    val error: String? = null
-)
-
-// UI State for updating application status
-data class UpdateApplicationStatusUIState(
-    val isLoading: Boolean = false,
-    val statusUpdated: Boolean = false,
-    val error: String? = null
-)
-
 
 @HiltViewModel
 class ApplicationViewModel @Inject constructor(
@@ -63,19 +42,15 @@ class ApplicationViewModel @Inject constructor(
             }
             _applyJobState.value = ApplyJobUIState(isLoading = true)
             val result = applicationRepository.checkApplicationStatus(currentUser.uid, workId)
-            result.fold(
-                onSuccess = { application ->
-                    _applyJobState.value = ApplyJobUIState(
-                        isLoading = false,
-                        hasApplied = application != null,
-                        existingApplicationStatus = application?.status
-                    )
-                },
-                onFailure = { exception ->
-                    _applyJobState.value =
-                        ApplyJobUIState(isLoading = false, error = exception.message)
-                }
-            )
+            result.fold(onSuccess = { application ->
+                _applyJobState.value = ApplyJobUIState(
+                    isLoading = false,
+                    hasApplied = application != null,
+                    existingApplicationStatus = application?.status
+                )
+            }, onFailure = { exception ->
+                _applyJobState.value = ApplyJobUIState(isLoading = false, error = exception.message)
+            })
         }
     }
 
@@ -103,16 +78,12 @@ class ApplicationViewModel @Inject constructor(
             )
 
             val result = applicationRepository.applyForJob(application)
-            result.fold(
-                onSuccess = {
-                    _applyJobState.value =
-                        ApplyJobUIState(applicationSubmitted = true, isLoading = false)
-                },
-                onFailure = { exception ->
-                    _applyJobState.value =
-                        ApplyJobUIState(error = exception.message, isLoading = false)
-                }
-            )
+            result.fold(onSuccess = {
+                _applyJobState.value =
+                    ApplyJobUIState(applicationSubmitted = true, isLoading = false)
+            }, onFailure = { exception ->
+                _applyJobState.value = ApplyJobUIState(error = exception.message, isLoading = false)
+            })
         }
     }
 
@@ -120,16 +91,13 @@ class ApplicationViewModel @Inject constructor(
         viewModelScope.launch {
             _applicantListState.value = ApplicantListUIState(isLoading = true)
             val result = applicationRepository.loadApplicants(workId)
-            result.fold(
-                onSuccess = { applicants ->
-                    _applicantListState.value =
-                        ApplicantListUIState(applicants = applicants, isLoading = false)
-                },
-                onFailure = { exception ->
-                    _applicantListState.value =
-                        ApplicantListUIState(error = exception.message, isLoading = false)
-                }
-            )
+            result.fold(onSuccess = { applicants ->
+                _applicantListState.value =
+                    ApplicantListUIState(applicants = applicants, isLoading = false)
+            }, onFailure = { exception ->
+                _applicantListState.value =
+                    ApplicantListUIState(error = exception.message, isLoading = false)
+            })
         }
     }
 
@@ -137,17 +105,14 @@ class ApplicationViewModel @Inject constructor(
         viewModelScope.launch {
             _updateStatusState.value = UpdateApplicationStatusUIState(isLoading = true)
             val result = applicationRepository.updateApplicationStatus(applicationId, newStatus)
-            result.fold(
-                onSuccess = {
-                    _updateStatusState.value =
-                        UpdateApplicationStatusUIState(statusUpdated = true, isLoading = false)
-                    loadApplicantsForJob(workIdToRefresh) // Refresh the list of applicants
-                },
-                onFailure = { exception ->
-                    _updateStatusState.value =
-                        UpdateApplicationStatusUIState(error = exception.message, isLoading = false)
-                }
-            )
+            result.fold(onSuccess = {
+                _updateStatusState.value =
+                    UpdateApplicationStatusUIState(statusUpdated = true, isLoading = false)
+                loadApplicantsForJob(workIdToRefresh) // Refresh the list of applicants
+            }, onFailure = { exception ->
+                _updateStatusState.value =
+                    UpdateApplicationStatusUIState(error = exception.message, isLoading = false)
+            })
         }
     }
 
