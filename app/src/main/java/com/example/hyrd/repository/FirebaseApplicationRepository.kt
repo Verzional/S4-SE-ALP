@@ -16,7 +16,7 @@ class FirebaseApplicationRepository @Inject constructor(
             val docRef = firestore.collection("applications").document()
             val applicationWithId = applicationModel.copy(
                 worker_id = docRef.id,
-                application_date = java.util.Date().toString()
+                application_date = java.util.Date()
             )
             docRef.set(applicationWithId).await()
             Result.success(docRef.id)
