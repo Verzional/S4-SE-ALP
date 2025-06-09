@@ -1,11 +1,29 @@
 package com.example.hyrd_v2.view
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,145 +33,137 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.example.hyrd_v2.R
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FaceVerification() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-    ) {
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(24.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
-                    contentDescription = "Back",
-                    modifier = Modifier.size(25.dp)
+fun FaceVerificationView(navController: NavController) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Identity Verification", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    // Typically, you might not want a back button in a sequential flow
+                    // or it should go to a specific point (e.g., app exit or start of flow).
+                    // For now, let's keep it simple or remove if it complicates flow.
+                    // IconButton(onClick = { navController.popBackStack() }) { // Or handle back more carefully
+                    //     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    // }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Identity Verification",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
-                )
-            }
+            )
         }
-
+    ) { innerPadding ->
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.Center)
-                .padding(horizontal = 24.dp)
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(innerPadding)
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "Face Verification",
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Your personal data is guaranteed to be safe in accordance with the Terms of Service and Privacy Policy of each party to comply with the regulations of the relevant authorities.",
-                fontSize = 14.sp,
+                text = "Your personal data is guaranteed to be safe. Please follow the requirements below for successful face recognition.",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
                 color = Color.Gray,
-                textAlign = TextAlign.Center
+                modifier = Modifier.padding(bottom = 24.dp)
             )
-            Spacer(modifier = Modifier.height(24.dp))
 
             Box(
                 modifier = Modifier
-                    .size(120.dp)
+                    .size(150.dp) // Increased size
                     .clip(CircleShape)
-                    .background(Color(0xFFFFF5E6)),
+                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
+                    .padding(16.dp) // Padding inside the circle
+                    .clickable { /* TODO: Implement open camera action */ },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "👤",
-                    fontSize = 64.sp
+                Icon( // Using an icon instead of text emoji
+                    painter = painterResource(id = R.drawable.outline_add_a_photo_24), // Placeholder, use a face scan icon
+                    contentDescription = "Take Face Photo",
+                    modifier = Modifier.size(72.dp),
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
             Text(
-                text = "Facial recognition",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "In order to improve the success rate of face recognition, please follow these requirements below",
-                fontSize = 14.sp,
+                text = "Tap to Open Camera",
+                style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
             )
-            Spacer(modifier = Modifier.height(24.dp))
 
+
+            Text(
+                text = "Facial Recognition Tips",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                FacialRequirement(
-                    icon = painterResource(R.drawable.ic2_iphone),
-                    label = "Hold phone upright"
+                FacialRequirement( // Ensure these drawables exist
+                    icon = painterResource(R.drawable.ic2_iphone), label = "Hold phone upright"
                 )
                 FacialRequirement(
                     icon = painterResource(R.drawable.sun),
-                    label = "Well-lit"
+                    label = "Ensure good lighting" // Clearer text
                 )
                 FacialRequirement(
                     icon = painterResource(R.drawable.ic2_password2),
-                    label = "Don't occluded face"
+                    label = "No face obstructions" // Clearer text
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.weight(1f)) // Push button to bottom
 
             Button(
-                onClick = { /* TODO: Add navigation or action */ },
+                onClick = {
+                    // TODO: Add actual face verification logic if any, or check if photo was taken
+                    navController.navigate("idCardVerification") // Navigate to ID Card Verification
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2F7CF6)),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text(text = "Next", color = Color.White)
+                Text("Next: ID Card Verification", color = MaterialTheme.colorScheme.onPrimary)
             }
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
 @Composable
-fun FacialRequirement(icon: Painter, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Image(
+fun FacialRequirement(icon: Painter, label: String) { // Already exists, ensure it's styled well
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(90.dp) // Give some fixed width for better arrangement
+    ) {
+        Icon( // Changed from Image to Icon for consistency if they are vector drawables
             painter = icon,
             contentDescription = label,
-            modifier = Modifier.size(32.dp)
+            modifier = Modifier.size(36.dp), // Slightly larger
+            tint = MaterialTheme.colorScheme.secondary // Themed tint
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = label,
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
             color = Color.Gray,
             textAlign = TextAlign.Center
         )
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun FaceVerificationScreenPreview() {
-    FaceVerification()
 }

@@ -38,30 +38,42 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import com.example.hyrd_v2.R
+import com.example.hyrd_v2.viewModel.AuthViewModel
+
 // No need for kotlinx.coroutines.launch here as LaunchedEffect is used
 
 @Composable
 fun LoginView(
-    email: String,
-    password: String,
-    isLoading: Boolean,
-    error: String? = null,
-    onEmailChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onLoginClick: () -> Unit,
-    onRegisterClick: () -> Unit
+    navController: NavController, authViewModel: AuthViewModel = hiltViewModel()
 ) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    val authState by authViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Show error toast
-    LaunchedEffect(error) {
-        error?.let {
-            if (!isLoading) {
-                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+    LaunchedEffect(
+        authState.isLoggedIn, authState.userProfile
+    ) { // Depend on isLoggedIn and userProfile
+        if (authState.isLoggedIn && authState.userProfile != null) { // Ensure profile is also loaded
+            // Navigate to a different screen upon successful login AND profile fetch
+            navController.navigate("jobList") { // Navigate to the new JobListView
+                popUpTo("login") { inclusive = true }
             }
         }
     }
+    LaunchedEffect(authState.error) {
+        authState.error?.let {
+            if (!authState.isLoading) { // Show toast only if not loading (to avoid duplicate toasts during process)
+                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                // Consider resetting error in ViewModel after showing it
+                // authViewModel.clearError() // You would need to add this method
+            }
+        }
+    }
+
 
     Column(
         modifier = Modifier
@@ -77,9 +89,8 @@ fun LoginView(
             modifier = Modifier.padding(bottom = 24.dp)
         ) {
             Image(
-                painter = painterResource(R.drawable.rectangle_20),
-                contentDescription = "App Logo",
-                modifier = Modifier.size(100.dp)
+                painter = painterResource(R.drawable.rectangle_20), // Ensure this drawable exists
+                contentDescription = "App Logo", modifier = Modifier.size(100.dp) // Adjusted size
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
@@ -100,7 +111,7 @@ fun LoginView(
 
         OutlinedTextField(
             value = email,
-            onValueChange = onEmailChange,
+            onValueChange = { email = it },
             label = { Text("Email") },
             modifier = Modifier
                 .fillMaxWidth()
@@ -111,7 +122,7 @@ fun LoginView(
 
         OutlinedTextField(
             value = password,
-            onValueChange = onPasswordChange,
+            onValueChange = { password = it },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -121,25 +132,23 @@ fun LoginView(
             singleLine = true
         )
 
-        if (isLoading) {
+        if (authState.isLoading) {
             CircularProgressIndicator(modifier = Modifier.padding(bottom = 16.dp))
         } else {
             Button(
                 onClick = {
                     if (email.isNotBlank() && password.isNotBlank()) {
-                        onLoginClick()
+                        authViewModel.login(email, password)
                     } else {
                         Toast.makeText(
-                            context,
-                            "Email and password cannot be empty",
-                            Toast.LENGTH_SHORT
+                            context, "Email and password cannot be empty", Toast.LENGTH_SHORT
                         ).show()
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(48.dp) // Standard button height
                     .padding(bottom = 16.dp)
             ) {
                 Text(text = "Login", color = MaterialTheme.colorScheme.onPrimary)
@@ -152,13 +161,15 @@ fun LoginView(
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onBackground
             )
+            //Spacer(modifier = Modifier.width(4.dp)) // Removed spacer for tighter text
             Text(
                 text = "Register",
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.primary, // Use primary color for links
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clickable { onRegisterClick() }
-            )
+                modifier = Modifier.clickable {
+                    navController.navigate("register")
+                })
         }
     }
 }

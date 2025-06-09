@@ -1,6 +1,6 @@
 package com.example.hyrd_v2.model
 
-import com.google.firebase.database.PropertyName
+import com.google.firebase.firestore.PropertyName
 import java.util.Date
 
 data class UserModel(
